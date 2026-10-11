@@ -1,0 +1,12 @@
+{
+  "theme_color": "#292929",
+  "background_color": "#f5f0eb",
+  "display": "standalone",
+  "start_url": ".",
+  "short_name": "Maintenance",
+  "name": "ESAAT – Maintenance",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/images/logo/logo.png", "sizes": "200x200", "type": "image/png" }
+  ]
+}

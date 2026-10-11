@@ -1,0 +1,26 @@
+# HTTPS automatique avec Caddy (certificat Let's Encrypt).
+# Prérequis : DOMAIN dans .env, DNS pointant vers le serveur, ports 80 et 443 ouverts.
+# Usage : docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+services:
+  nginx:
+    ports: !reset []
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Définir DOMAIN dans .env}
+    command: caddy reverse-proxy --from ${DOMAIN} --to nginx:80
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

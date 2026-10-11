@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demande d'intervention</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --bg: #f5f0eb; --card: #fff; --text: #292929; --muted: #6e6863;
+    --border: #d3cfcb; --accent: #292929; --accent-text: #f5f0eb;
+    --ok-bg: #e6f4ea; --ok: #1e6b34; --err-bg: #fdecec; --err: #a1261f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1f1d1c; --card: #292929; --text: #f5f0eb; --muted: #bbb6b1;
+      --border: #3a3634; --accent: #f5f0eb; --accent-text: #292929;
+      --ok-bg: #173523; --ok: #8fd6a3; --err-bg: #3a1a19; --err: #ff9d95;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 560px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .logo { display: block; margin-bottom: 12px; }
+  @media (prefers-color-scheme: dark) { .logo { content: url(/static/images/logo/logo-white.png); } }
+  .intro { color: var(--muted); margin: 0 0 12px; }
+  .notice {
+    margin: 0 0 20px; padding: 12px 14px; border-radius: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+  }
+  .notice a { color: var(--accent); font-weight: 600; }
+  form, .result {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  label { display: block; font-weight: 600; margin: 16px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+  .opt { font-weight: 400; color: var(--muted); }
+  input, select, textarea {
+    width: 100%; font: inherit; color: inherit; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  }
+  textarea { min-height: 120px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+  .prio { display: flex; gap: 8px; flex-wrap: wrap; }
+  .prio label {
+    flex: 1; margin: 0; font-weight: 500; text-align: center; cursor: pointer;
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px;
+  }
+  .prio input { position: absolute; opacity: 0; width: 0; }
+  .prio input:checked + span { color: var(--accent); font-weight: 700; }
+  .prio label:has(input:checked) { border-color: var(--accent); }
+  .prio label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+  .hp { position: absolute; left: -9999px; }
+  button {
+    margin-top: 20px; width: 100%; font: inherit; font-weight: 600;
+    background: var(--accent); color: var(--accent-text); border: 0;
+    border-radius: 8px; padding: 12px; cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: wait; }
+  .msg { margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+  .msg.err { display: block; background: var(--err-bg); color: var(--err); }
+  .result { display: none; text-align: center; }
+  .result.show { display: block; }
+  .result h2 { color: var(--ok); margin: 0 0 8px; }
+  .result button { width: auto; padding: 10px 20px; }
+  .foot { margin-top: 24px; text-align: center; font-size: .8rem; color: var(--muted); }
+  .foot a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/static/images/logo/logo.png" alt="ESAAT" width="56" height="56">
+  <h1>Demande d'intervention</h1>
+  <p class="intro">Signalez une panne ou un besoin de maintenance. Cette demande est destinée aux <strong>agents techniques</strong>.</p>
+  <p class="notice">Pour un problème <strong>informatique</strong>, merci d'écrire à
+    <a href="mailto:dsi@esaat-roubaix.com">dsi@esaat-roubaix.com</a>.</p>
+
+  <form id="f" novalidate>
+    <div class="row">
+      <div>
+        <label for="nom">Nom et prénom</label>
+        <input id="nom" name="nom" required maxlength="100" autocomplete="name">
+      </div>
+      <div>
+        <label for="email">E-mail <span class="opt">(facultatif)</span></label>
+        <input id="email" name="email" type="email" maxlength="150" autocomplete="email">
+      </div>
+    </div>
+
+    <label for="lieu">Lieu</label>
+    <select id="lieu" name="lieu"><option value="">— Choisir —</option></select>
+    <input id="lieu_libre" name="lieu_libre" maxlength="150" placeholder="Précision (salle, étage…)" style="margin-top:8px">
+
+    <label for="titre">Objet</label>
+    <input id="titre" name="titre" required maxlength="150" placeholder="Ex. : vidéoprojecteur en panne">
+
+    <label for="description">Description</label>
+    <textarea id="description" name="description" required maxlength="4000" placeholder="Que se passe-t-il ? Depuis quand ?"></textarea>
+
+    <label>Urgence</label>
+    <div class="prio">
+      <label><input type="radio" name="priorite" value="LOW" checked><span>Faible</span></label>
+      <label><input type="radio" name="priorite" value="MEDIUM"><span>Moyenne</span></label>
+      <label><input type="radio" name="priorite" value="HIGH"><span>Haute</span></label>
+    </div>
+
+    <div class="hp" aria-hidden="true">
+      <label for="site_web">Ne pas remplir</label>
+      <input id="site_web" name="site_web" tabindex="-1" autocomplete="off">
+    </div>
+    <input type="hidden" name="t" id="t">
+
+    <button id="go" type="submit">Envoyer la demande</button>
+    <div id="msg" class="msg" role="alert"></div>
+  </form>
+
+  <div id="ok" class="result" role="status">
+    <h2>Demande envoyée</h2>
+    <p id="ok-txt">Merci, l'équipe technique va la traiter.</p>
+    <button type="button" id="again">Nouvelle demande</button>
+  </div>
+
+  <p class="foot">Propulsé par <a href="https://github.com/Grashjs/cmms">Atlas CMMS</a> (AGPLv3) ·
+    <a href="https://github.com/ESAAT-Roubaix/atlas-cmms">code source</a></p>
+</main>
+
+<script>
+  const f = document.getElementById("f");
+  const msg = document.getElementById("msg");
+  const go = document.getElementById("go");
+  const lieu = document.getElementById("lieu");
+  const params = new URLSearchParams(location.search);
+  const base = location.pathname.replace(/\/$/, "");
+
+  document.getElementById("t").value = Date.now();
+
+  // Liste des lieux ; ?lieu=<id ou nom> présélectionne (pratique pour les QR codes)
+  fetch(base + "/lieux").then(r => r.ok ? r.json() : []).then(list => {
+    const voulu = (params.get("lieu") || "").toLowerCase();
+    for (const l of list) {
+      const o = new Option(l.name, l.id);
+      if (voulu && (String(l.id) === voulu || l.name.toLowerCase() === voulu)) o.selected = true;
+      lieu.add(o);
+    }
+    if (voulu && !lieu.value) document.getElementById("lieu_libre").value = params.get("lieu");
+  }).catch(() => {});
+
+  function erreur(t) { msg.textContent = t; msg.className = "msg err"; }
+
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    msg.className = "msg";
+    for (const id of ["nom", "titre", "description"]) {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) { el.focus(); return erreur("Merci de remplir les champs nom, objet et description."); }
+    }
+
+    go.disabled = true; go.textContent = "Envoi…";
+    try {
+      const r = await fetch(base + "/envoyer", { method: "POST", body: new FormData(f) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.erreur || "Erreur lors de l'envoi.");
+      document.getElementById("ok-txt").textContent = data.numero
+        ? `Merci, votre demande ${data.numero} a été transmise à l'équipe technique.`
+        : "Merci, l'équipe technique va la traiter.";
+      f.style.display = "none";
+      document.getElementById("ok").classList.add("show");
+    } catch (err) {
+      erreur(err.message);
+    } finally {
+      go.disabled = false; go.textContent = "Envoyer la demande";
+    }
+  });
+
+  document.getElementById("again").addEventListener("click", () => {
+    const garder = lieu.value;
+    f.reset(); lieu.value = garder;
+    document.getElementById("t").value = Date.now();
+    document.getElementById("ok").classList.remove("show");
+    f.style.display = "";
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+--- a/src/main/java/com/grash/service/LicenseService.java	2026-10-11 16:30:29
++++ b/src/main/java/com/grash/service/LicenseService.java	2026-10-11 16:30:29
+@@ -45,6 +45,10 @@
+     @Value("${keygen.account-id}")
+     private String keygenAccountId;
+ 
++    // ESAAT : options activées localement, sans clé de licence (ex. "FILE_ATTACHMENTS,VOICE_NOTES")
++    @Value("${LOCAL_ENTITLEMENTS:}")
++    private String localEntitlements;
++
+     @Value("${license-file-path:#{null}}")
+     private String licenseFilePath;
+ 
+@@ -53,7 +57,26 @@
+     private volatile Set<String> cachedEntitlements = new HashSet<>();
+     private volatile long lastCheckedTime = 0;
+ 
+-    public synchronized LicensingState getLicensingState() {
++    public LicensingState getLicensingState() {
++        LicensingState state = getRemoteLicensingState();
++        Set<String> local = Arrays.stream(localEntitlements.split(","))
++                .map(String::trim)
++                .filter(e -> !e.isEmpty())
++                .collect(Collectors.toSet());
++        if (local.isEmpty()) return state;
++        Set<String> entitlements = new HashSet<>(state.isValid() ? state.getEntitlements() : Set.of());
++        entitlements.addAll(local);
++        return LicensingState.builder()
++                .hasLicense(state.isHasLicense())
++                .valid(true)
++                .planName(state.getPlanName())
++                .entitlements(entitlements)
++                .expirationDate(state.getExpirationDate())
++                .usersCount(state.getUsersCount())
++                .build();
++    }
++
++    private synchronized LicensingState getRemoteLicensingState() {
+         if (isCacheValid()) {
+             return buildLicensingStateFromCache();
+         }

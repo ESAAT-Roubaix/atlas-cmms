@@ -1,0 +1,6 @@
+.env
+logo/*
+config/*
+!logo/.gitkeep
+!config/.gitkeep
+.DS_Store
