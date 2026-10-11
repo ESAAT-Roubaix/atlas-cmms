@@ -1,7 +1,7 @@
 // Formulaire public de demande de travaux -> API Atlas CMMS.
 // Se connecte avec un compte de service (rôle Demandeur) et crée des demandes via POST /requests.
-// Pas de photo : les pièces jointes exigent une licence Atlas (FILE_ATTACHMENTS).
-// Aucune dépendance : Node 22 fournit fetch et Request.formData().
+// Pièce jointe : nécessite FILE_ATTACHMENTS, activé par le correctif atlas-api/ (LOCAL_ENTITLEMENTS).
+// Aucune dépendance : Node 22 fournit fetch, FormData et Request.formData().
 
 const http = require("node:http");
 const fs = require("node:fs");
@@ -12,6 +12,7 @@ const EMAIL = process.env.DEMANDE_EMAIL;
 const PASSWORD = process.env.DEMANDE_PASSWORD;
 const PORT = 3000;
 const RATE_LIMIT = { max: 5, windowMs: 10 * 60 * 1000 };
+const MAX_PJ = 10 * 1024 * 1024;
 
 if (!EMAIL || !PASSWORD) {
   console.error("DEMANDE_EMAIL et DEMANDE_PASSWORD doivent être définis");
@@ -83,6 +84,36 @@ setInterval(() => {
 // ---- Création de la demande ----
 const PRIORITES = new Set(["LOW", "MEDIUM", "HIGH"]);
 
+// Type réel du fichier d'après ses premiers octets (le type annoncé par le navigateur ne suffit pas)
+function typePj(octets) {
+  const hex = Buffer.from(octets.subarray(0, 12)).toString("hex");
+  const ascii = Buffer.from(octets.subarray(0, 12)).toString("latin1");
+  if (hex.startsWith("ffd8ff")) return { mime: "image/jpeg", image: true };
+  if (hex.startsWith("89504e47")) return { mime: "image/png", image: true };
+  if (ascii.startsWith("GIF8")) return { mime: "image/gif", image: true };
+  if (ascii.startsWith("RIFF") && ascii.slice(8, 12) === "WEBP") return { mime: "image/webp", image: true };
+  if (ascii.slice(4, 8) === "ftyp" && /^(heic|heix|mif1|msf1)$/.test(ascii.slice(8, 12)))
+    return { mime: "image/heic", image: true };
+  if (ascii.startsWith("%PDF-")) return { mime: "application/pdf", image: false };
+  return null;
+}
+
+async function envoyerPj(fichier) {
+  if (fichier.size > MAX_PJ) throw new Erreur("Pièce jointe trop lourde (10 Mo maximum).");
+  const octets = new Uint8Array(await fichier.arrayBuffer());
+  const type = typePj(octets);
+  if (!type) throw new Erreur("La pièce jointe doit être une photo (JPEG, PNG, HEIC…) ou un PDF.");
+  const nom = (fichier.name || "piece-jointe").replace(/[^\w.\- ]+/g, "_").slice(0, 100);
+  const fd = new FormData();
+  fd.append("files", new Blob([octets], { type: type.mime }), nom);
+  fd.append("hidden", "false");
+  fd.append("type", type.image ? "IMAGE" : "OTHER");
+  const res = await atlas("/files/upload", { method: "POST", body: fd });
+  if (!res.ok) throw new Error(`Envoi de la pièce jointe refusé (${res.status}) : ${await res.text()}`);
+  const [enregistre] = await res.json();
+  return { id: enregistre.id, image: type.image };
+}
+
 function champ(form, name, max) {
   return String(form.get(name) || "").trim().slice(0, max);
 }
@@ -115,6 +146,13 @@ async function envoyer(form) {
     priority: PRIORITES.has(priorite) ? priorite : "NONE",
   };
   if (lieuId && (await getLieux()).some((l) => l.id === lieuId)) body.location = { id: lieuId };
+
+  const pj = form.get("pj");
+  if (pj && typeof pj === "object" && pj.size > 0) {
+    const fichier = await envoyerPj(pj);
+    body.files = [{ id: fichier.id }];
+    if (fichier.image) body.image = { id: fichier.id }; // affichée en vignette dans Atlas
+  }
 
   const res = await atlas("/requests", {
     method: "POST",
