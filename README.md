@@ -10,7 +10,7 @@ Pour l'informatique, les demandes restent à adresser à dsi@esaat-roubaix.com.
 | Élément | Détail | Où |
 |---|---|---|
 | Formulaire public de demande | `/demande` : demande sans compte avec pièce jointe (photo ou PDF), mode clair/sombre, transmise à Atlas via un compte de service. QR code par salle avec `?lieu=B204` | `demande/` |
-| Pièces jointes débloquées | Le backend est recompilé avec un correctif : `LOCAL_ENTITLEMENTS` active des options sans clé de licence | `atlas-api/` |
+| Pièces jointes et main-d’œuvre débloquées | Le backend est recompilé avec un correctif : `LOCAL_ENTITLEMENTS` active des options sans clé de licence | `atlas-api/` |
 | Charte ESAAT | Logo, favicons, icône mobile, couleurs, mention « Powered by Intelloop » retirée | `branding/`, `.env` |
 | Point d'entrée unique | nginx : `/` frontend, `/api/` backend, `/storage/` fichiers, `/demande` formulaire | `nginx.conf` |
 | HTTPS optionnel | Caddy avec certificat Let's Encrypt automatique | `docker-compose.https.yml` |
